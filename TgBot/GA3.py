@@ -1,26 +1,22 @@
 import openai
 import telebot
 import sqlite3
+import requests
 
 # set API key for OpenAI
 openai.api_key = ""
-
 # create bot object
 bot = telebot.TeleBot(token='')
-
 # set up database connection
 conn = sqlite3.connect('GDB.db', check_same_thread=False)
 c = conn.cursor()
-
 # initialize state variable
 is_feedback = False
-
 # handle '/start' command
 @bot.message_handler(commands=['start'])
 def start_command(message: telebot.types.Message):
     # send start message
     bot.send_message(chat_id=message.chat.id, text="👋 Я GigaAsessor на основе GPT-3.5 и я помогаю улучшить запрос. Отправь мне свой запрос, для нейросети, я его оценю и дам советы по улучшению.")
-
 # handle user messages
 @bot.message_handler(func=lambda message: True)
 def process_message(message: telebot.types.Message):
