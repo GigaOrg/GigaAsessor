@@ -1,0 +1,18 @@
+.banner {
+    background: url(../assets/background.jpg);
+    color: white;
+    margin: 15px 0;
+}
+
+.use {
+    color: white;
+}
+
+.bot {
+    max-width: 500px;
+    flex-grow: 1;
+    outline: solid #94b9f1 2px;
+    
+    border-radius: 21px;
+}
+
