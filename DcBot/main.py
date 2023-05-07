@@ -1,11 +1,11 @@
 from os import environ
-import disnake
-import openai  # хуета
-
-import sqlite3
+import openai
+from openai import Completion
+from sqlite3 import connect
 from random import choice
 from disnake.ext import commands
 from disnake import Intents, ApplicationCommandInteraction, Message, ButtonStyle, ui, MessageInteraction, DMChannel
+from disnake.ui import View, Button
 
 # set API key for OpenAI
 openai.api_key = environ.get("OPENAI_TOKEN")
@@ -17,32 +17,41 @@ bot = commands.Bot(
 )
 
 # set up database connection
-conn = sqlite3.connect('GDB.db', check_same_thread=False)
+conn = connect('GDB.db', check_same_thread=False)
 c = conn.cursor()
 
 
-class RatingFromUser(disnake.ui.View):
-    message: disnake.Message
+class RatingFromUser(View):
 
-    def __init__(self):
-        super().__init__(timeout=1.0)
+    def __init__(self, message: Message):
+        super().__init__(timeout=10.0)
+        self.message = message
 
     async def on_timeout(self):
-        self.disabled = True
+        for button in self.children:
+            button.disabled = True
         await self.message.edit(view=self)
 
-    @disnake.ui.button(emoji="👎", style=ButtonStyle.red)
-    async def bad(self, button: ui.Button, inter: MessageInteraction):
+    @ui.button(emoji="👎", style=ButtonStyle.red)
+    async def bad(self, button: Button, inter: MessageInteraction):
+        c.execute("INSERT INTO GDB (id, mark, text) VALUES (?, ?, ?)", (inter.user.id, 0, self.message.content))
+        conn.commit()
+
         await inter.response.send_message(f"Оценка {button.label} принята", ephemeral=True)
         self.stop()
 
-    @disnake.ui.button(emoji="🤝", style=ButtonStyle.grey)
-    async def normal(self, button: disnake.ui.Button, inter: MessageInteraction):
+    @ui.button(emoji="🤝", style=ButtonStyle.grey)
+    async def normal(self, button: Button, inter: MessageInteraction):
+        c.execute("INSERT INTO GDB (id, mark, text) VALUES (?, ?, ?)", (inter.user.id, 1, self.message.content))
+        conn.commit()
         await inter.response.send_message(f"Оценка {button.label} принята", ephemeral=True)
         self.stop()
 
-    @disnake.ui.button(emoji="👍", style=ButtonStyle.green)
-    async def good(self, button: disnake.ui.Button, inter: MessageInteraction):
+    @ui.button(emoji="👍", style=ButtonStyle.green)
+    async def good(self, button: Button, inter: MessageInteraction):
+        c.execute("INSERT INTO GDB (id, mark, text) VALUES (?, ?, ?)", (inter.user.id, 2, self.message.content))
+        conn.commit()
+
         await inter.response.send_message(f"Оценка {button.label} принята", ephemeral=True)
         self.stop()
 
@@ -53,7 +62,7 @@ async def request_to_ai(text: str) -> str:
                     "а я), может надо что-то уточнить(для темы промпта)? Дай на это ответ по пунктам.\n//"
     full_prompt = prompt_prefix + text
     # send prompt to OpenAI API
-    response = openai.Completion.create(
+    response = Completion.create(
         engine='text-davinci-003',
         prompt=full_prompt,
         max_tokens=1024,
@@ -74,7 +83,7 @@ async def on_message(message: Message):
     if isinstance(message.channel, DMChannel) and not message.author.bot:
         await message.add_reaction("👀")
         text = await request_to_ai(message.content)
-        view = RatingFromUser()
+        view = RatingFromUser(message)
         await message.channel.send(content=text, view=view)
 
     if not message.content.startswith("@Clyde"):
