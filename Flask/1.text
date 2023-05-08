@@ -1,0 +1,4 @@
+import requests
+
+requests.post('http://localhost:5000/api/v1/users', json={}, headers={'Content-Type': 'application/json'})
+requests.get('http://localhost:5000/api/v1/users').json()
